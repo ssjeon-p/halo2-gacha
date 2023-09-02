@@ -1,11 +1,8 @@
 use halo2_proofs::{
-    plonk::{ConstraintSystem, Error, Column, Advice, Fixed, Selector, Instance, Expression, Circuit},
-    arithmetic::Field,
+    plonk::{ConstraintSystem, Error, Column, Advice, Selector, Instance, Expression, Circuit},
     circuit::{Layouter, Value, SimpleFloorPlanner, AssignedCell},
-    poly::Rotation, pasta::{Fp, group::{prime::PrimeCurveAffine, ff::PrimeField}},
+    poly::Rotation, pasta::{Fp, group::ff::PrimeField},
 };
-
-use std::{marker::PhantomData, os::windows::prelude::IntoRawSocket, ops::Mul};
 
 struct ACell (AssignedCell<Fp,Fp>);
 
