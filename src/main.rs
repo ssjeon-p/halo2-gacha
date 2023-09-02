@@ -1,7 +1,7 @@
 use halo2_proofs::{
     plonk::{ConstraintSystem, Error, Column, Advice, Selector, Instance, Expression, Circuit},
     circuit::{Layouter, Value, SimpleFloorPlanner, AssignedCell},
-    poly::Rotation, pasta::{Fp, group::ff::PrimeField},
+    poly::Rotation, pasta::{Fp, group::ff::PrimeField}, dev::MockProver,
 };
 
 struct ACell (AssignedCell<Fp,Fp>);
@@ -54,7 +54,7 @@ impl<const MULTIPLIER: u64, const ADDER: u64> GachaConfig<MULTIPLIER, ADDER> {
 
             let s = meta.query_selector(selector);
 
-            vec![ s * (a * x - b - m * d) ]
+            vec![ s * (a * x + c - b - m * d) ]
         });
 
         GachaConfig {
@@ -105,8 +105,12 @@ impl<const MULTIPLIER: u64, const ADDER: u64> GachaConfig<MULTIPLIER, ADDER> {
 
             self.selector.enable(&mut region, offset)?;
 
-            let rem_val = prev.map(rem);
-            let quot_val = prev.map(quot);      
+            let next_val = prev.map(|a| {
+                a * Fp::from(MULTIPLIER) + Fp::from(ADDER)
+            });
+
+            let rem_val = next_val.map(rem);
+            let quot_val = next_val.map(quot);      
 
             region.assign_advice(|| "seed", self.adv[0], offset, || prev).map(ACell)?;
             let next_cell = region.assign_advice(|| "next value mod m", self.adv[1], offset, || rem_val).map(ACell)?;
@@ -127,8 +131,11 @@ impl<const MULTIPLIER: u64, const ADDER: u64> GachaConfig<MULTIPLIER, ADDER> {
             self.selector.enable(&mut region, offset)?;
 
             let prev_val = prev.0.value().copied();
-            let rem_val = prev_val.map(rem);
-            let quot_val = prev_val.map(quot);      
+            let next_val = prev_val.map(|a| {
+                a * Fp::from(MULTIPLIER) + Fp::from(ADDER)
+            }); 
+            let rem_val = next_val.map(rem);
+            let quot_val = next_val.map(quot);      
 
             prev.0.copy_advice(|| "prev", &mut region, self.adv[0], offset)?;
             let next_cell = region.assign_advice(|| "next value mod m", self.adv[1], offset, || rem_val).map(ACell)?;
@@ -146,7 +153,6 @@ impl<const MULTIPLIER: u64, const ADDER: u64> GachaConfig<MULTIPLIER, ADDER> {
     ) -> Result<(), Error> {
         layouter.constrain_instance(cell.0.cell(), self.inst, row)
     }
-
 }
 
 #[derive(Debug, Default)]
@@ -168,7 +174,7 @@ impl<const MULTIPLIER: u64, const ADDER: u64> Circuit<Fp> for GachaCircuit<MULTI
     }
 
     fn synthesize(&self, config: Self::Config, mut layouter: impl Layouter<Fp>) -> Result<(), Error> {
-        let mut prev = config.assign_first_row(layouter.namespace(|| "first row"), self.seed)?;
+        let prev = config.assign_first_row(layouter.namespace(|| "first row"), self.seed)?;
 
         for _i in 0..self.n {
             let prev = config.assign_next_row(layouter.namespace(|| "next row"), &prev)?;
@@ -187,9 +193,17 @@ impl<const MULTIPLIER: u64, const ADDER: u64> Circuit<Fp> for GachaCircuit<MULTI
 
 
 fn main() {
-    println!("Hello, world!");
-    let a = Fp::from(1249842598);
-    println!("quot: {:?}", quot(a));
-    println!("rem: {:?}", rem(a));
+    let seed = 123;
+    let circuit = GachaCircuit::<15, 3> {
+        seed: Value::known(Fp::from(seed)),
+        n: 1,
+    };
+
+    let public_input = vec![Fp::from(1)];
+    let prover = MockProver::run(4, &circuit, vec![public_input]).unwrap();
+
+    prover.assert_satisfied();
+
+
 
 }
