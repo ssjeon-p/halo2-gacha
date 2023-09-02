@@ -175,17 +175,17 @@ fn get_random(
 
 
 fn main() {
-    let seed = 54352;
+    let seed: u64 = 54352;
 
     const MULTIPLIER: u64 = 15;
     const ADDER: u64 = 3;
-    let modulus = 1 << 16;
+    let modulus: u64 = 1 << 16;
 
     let multiplier = MULTIPLIER;
     let adder = ADDER;
 
     for i in 1..30 {
-        let number_of_iter = i;
+        let number_of_iter: u64 = i;
 
         let circuit = GachaCircuit::<MULTIPLIER, ADDER> {
             seed: Value::known(Fp::from(seed)),
