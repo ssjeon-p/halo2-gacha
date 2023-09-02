@@ -146,10 +146,10 @@ impl<const MULTIPLIER: u64, const ADDER: u64> Circuit<Fp> for GachaCircuit<MULTI
     }
 
     fn synthesize(&self, config: Self::Config, mut layouter: impl Layouter<Fp>) -> Result<(), Error> {
-        let prev = config.assign_first_row(layouter.namespace(|| "first row"), self.seed)?;
+        let mut prev = config.assign_first_row(layouter.namespace(|| "first row"), self.seed)?;
 
-        for _i in 0..self.n {
-            let prev = config.assign_next_row(layouter.namespace(|| "next row"), &prev)?;
+        for _i in 1..self.n {
+            prev = config.assign_next_row(layouter.namespace(|| "next row"), &prev)?;
         }
 
         config.expose_public(layouter.namespace(|| "out"), &prev, 0)?;
