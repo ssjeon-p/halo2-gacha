@@ -162,20 +162,44 @@ impl<const MULTIPLIER: u64, const ADDER: u64> Circuit<Fp> for GachaCircuit<MULTI
 
 }
 
+fn get_random(
+    seed: u64,
+    multiplier: u64,
+    adder: u64,
+    modulus: u64,
+    number_of_iter: u64,
+) -> u64 {
+    let mut ret = seed;
+    for _i in 0..number_of_iter {
+        ret = (ret * multiplier + adder) % modulus;
+    }
+    ret
+}
+
 
 
 fn main() {
-    let seed = 123;
-    let circuit = GachaCircuit::<15, 3> {
-        seed: Value::known(Fp::from(seed)),
-        n: 2,
-    };
+    let seed = 54352;
 
-    let public_input = vec![Fp::from(27723)];
-    let prover = MockProver::run(4, &circuit, vec![public_input]).unwrap();
+    const MULTIPLIER: u64 = 15;
+    const ADDER: u64 = 3;
+    let modulus = 1 << 16;
 
-    prover.assert_satisfied();
+    let multiplier = MULTIPLIER;
+    let adder = ADDER;
 
+    for i in 1..30 {
+        let number_of_iter = i;
 
-
+        let circuit = GachaCircuit::<MULTIPLIER, ADDER> {
+            seed: Value::known(Fp::from(seed)),
+            n: number_of_iter,
+        };
+    
+        let rand = get_random(seed, multiplier, adder, modulus, number_of_iter);
+        println!("{}", rand);
+        let public_input = vec![Fp::from(rand)];
+        let prover = MockProver::run(10, &circuit, vec![public_input]).unwrap();
+        prover.assert_satisfied();
+    }
 }
