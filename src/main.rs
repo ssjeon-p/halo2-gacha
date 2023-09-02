@@ -1,7 +1,7 @@
 use halo2_proofs::{
     plonk::{ConstraintSystem, Error, Column, Advice, Selector, Instance, Expression, Circuit},
     circuit::{Layouter, Value, SimpleFloorPlanner, AssignedCell},
-    poly::Rotation, pasta::{Fp, group::ff::PrimeField}, dev::MockProver,
+    poly::Rotation, pasta::{Fp, group::ff::PrimeField},
 };
 
 struct ACell (AssignedCell<Fp,Fp>);
