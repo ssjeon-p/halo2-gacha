@@ -8,7 +8,7 @@ struct ACell (AssignedCell<Fp,Fp>);
 
 // MODULUS_EXPONENT should be multiple of 8
 // MODULUS^2 should be less than the order of prime field
-// using constants of random function in C++
+// below are constants of Linear Congruence generator in C++
 pub const MODULUS_EXPONENT: u64 = 32;
 pub const MODULUS: u64 = 1 << MODULUS_EXPONENT;
 pub const MULTIPLIER: u64 = 214013;
