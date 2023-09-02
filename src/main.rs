@@ -172,30 +172,74 @@ fn get_random(
     ret
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use halo2_proofs::{
+        dev::MockProver,
+        pasta::Fp,
+        circuit::Value,
+    };
 
+    #[test]
+    fn test_rand() {
+        let seed: u64 = 54352;
 
-fn main() {
-    let seed: u64 = 54352;
+        const MULTIPLIER: u64 = 15;
+        const ADDER: u64 = 3;
+        let modulus: u64 = 1 << 16;
 
-    const MULTIPLIER: u64 = 15;
-    const ADDER: u64 = 3;
-    let modulus: u64 = 1 << 16;
+        let multiplier = MULTIPLIER;
+        let adder = ADDER;
 
-    let multiplier = MULTIPLIER;
-    let adder = ADDER;
+        for i in 1..30 {
+            let number_of_iter: u64 = i;
 
-    for i in 1..30 {
-        let number_of_iter: u64 = i;
+            let circuit = GachaCircuit::<MULTIPLIER, ADDER> {
+                seed: Value::known(Fp::from(seed)),
+                n: number_of_iter,
+            };
+    
+            let rand = get_random(seed, multiplier, adder, modulus, number_of_iter);
+            println!("{}", rand);
+            let public_input = vec![Fp::from(rand)];
+            let prover = MockProver::run(10, &circuit, vec![public_input]).unwrap();
+            prover.assert_satisfied();
+        }
+    }
+
+    #[cfg(feature = "dev-graph")]
+    #[test]
+    fn print_test_rand() {
+        use plotters::prelude::*;
+
+        let seed: u64 = 54352;
+
+        let number_of_iter: u64 = 30;
+        const MULTIPLIER: u64 = 15;
+        const ADDER: u64 = 3;
+        let modulus: u64 = 1 << 16;
+
+        let multiplier = MULTIPLIER;
+        let adder = ADDER;
 
         let circuit = GachaCircuit::<MULTIPLIER, ADDER> {
             seed: Value::known(Fp::from(seed)),
             n: number_of_iter,
         };
     
-        let rand = get_random(seed, multiplier, adder, modulus, number_of_iter);
-        println!("{}", rand);
-        let public_input = vec![Fp::from(rand)];
-        let prover = MockProver::run(10, &circuit, vec![public_input]).unwrap();
-        prover.assert_satisfied();
+        let root = BitMapBackend::new("rand.png", (1024, 3096)).into_drawing_area();
+        root.fill(&WHITE).unwrap();
+        let root = root.titled("Rand Layout", ("sans-serif", 60)).unwrap();
+
+        halo2_proofs::dev::CircuitLayout::default()
+            .render(5, &circuit, &root)
+            .unwrap();
     }
+}
+
+
+
+fn main() {
+    
 }
