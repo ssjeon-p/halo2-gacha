@@ -14,24 +14,6 @@ struct GachaConfig<const MULTIPLIER: u64, const ADDER: u64> {
     selector: Selector,
 }
 
-fn rem(input: Fp) -> Fp {
-    let repr = input.to_repr();
-    let mut rem_repr: [u8; 32] = [0; 32];
-    rem_repr[0] = repr[0];
-    rem_repr[1] = repr[1];
-    Fp::from_repr(rem_repr).unwrap()
-}
-
-fn quot(input: Fp) -> Fp {
-    let mut repr = input.to_repr();
-    repr[0] = 0;
-    repr[1] = 0;
-    for i in 0..30 {
-        repr[i] = repr[i+2];
-    }
-    Fp::from_repr(repr).unwrap()
-}
-
 impl<const MULTIPLIER: u64, const ADDER: u64> GachaConfig<MULTIPLIER, ADDER> {
     fn configure(meta: &mut ConstraintSystem<Fp>) -> Self {
         let adv_0 = meta.advice_column();
@@ -156,10 +138,24 @@ impl<const MULTIPLIER: u64, const ADDER: u64> Circuit<Fp> for GachaCircuit<MULTI
         
         Ok(())
     }
+}
 
+fn rem(input: Fp) -> Fp {
+    let repr = input.to_repr();
+    let mut rem_repr: [u8; 32] = [0; 32];
+    rem_repr[0] = repr[0];
+    rem_repr[1] = repr[1];
+    Fp::from_repr(rem_repr).unwrap()
+}
 
-
-
+fn quot(input: Fp) -> Fp {
+    let mut repr = input.to_repr();
+    repr[0] = 0;
+    repr[1] = 0;
+    for i in 0..30 {
+        repr[i] = repr[i+2];
+    }
+    Fp::from_repr(repr).unwrap()
 }
 
 fn get_random(
