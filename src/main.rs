@@ -9,12 +9,12 @@ use std::{marker::PhantomData, os::windows::prelude::IntoRawSocket, ops::Mul};
 
 struct ACell<F: Field> (AssignedCell<F,F>);
 
-struct GachaConfig<F: Field, const MULTIPLIER, > {
+struct GachaConfig<F: Field> {
     adv: [Column<Advice>; 2],
     modulus: Column<Fixed>,
     multiplier: Column<Fixed>,
     adder: Column<Fixed>,
-    divisor: Column<Instance>,
+    divisor: Column<Advice>,
     selector: Selector,
     _marker: PhantomData<F>,
 }
@@ -26,7 +26,7 @@ impl<F: Field> GachaConfig<F> {
         let modulus = meta.fixed_column();
         let multiplier = meta.fixed_column();
         let adder = meta.fixed_column();
-        let divisor = meta.instance_column();
+        let divisor = meta.advice_column();
         let selector = meta.selector();
 
         meta.enable_equality(adv_0);
@@ -43,7 +43,7 @@ impl<F: Field> GachaConfig<F> {
             let a = meta.query_fixed(multiplier);
             let m = meta.query_fixed(modulus);
 
-            let d = meta.query_instance(divisor, Rotation::cur());
+            let d = meta.query_advice(divisor, Rotation::cur());
 
             let s = meta.query_selector(selector);
 
@@ -79,7 +79,9 @@ impl<F: Field> GachaConfig<F> {
 
             region.assign_fixed(|| "multiplier", self.multiplier, offset, || multiplier);
             region.assign_fixed(|| "adder", self.adder, offset, || adder);
-            
+
+            region.assign_advice(|| "divisor", self.divisor, offset, || Value::from(Field::ONE));
+
 
             Ok((first_cell, next_cell))
         })
@@ -107,6 +109,7 @@ impl<F: Field> GachaConfig<F> {
         prev: &ACell<F>,
     ) -> Result<ACell<F>, Error> {
         let offset = 0;
+
     }
     
     fn expose_public(
