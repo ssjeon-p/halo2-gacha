@@ -15,14 +15,14 @@ pub const MULTIPLIER: u64 = 214013;
 pub const INCREMENT: u64 = 2531011;
 
 #[derive(Clone, Debug)]
-struct GachaConfig {
+struct GachaConfig<const NUMBER_OF_ITER: u64> {
     adv: [Column<Advice>; 2],
     divisor: Column<Advice>,
     inst: Column<Instance>,
     selector: Selector,
 }
 
-impl GachaConfig {
+impl<const NUMBER_OF_ITER: u64> GachaConfig<NUMBER_OF_ITER> {
     fn configure(meta: &mut ConstraintSystem<Fp>) -> Self {
         let adv_0 = meta.advice_column();
         let adv_1 = meta. advice_column();
@@ -65,14 +65,14 @@ impl GachaConfig {
     fn assign_first_row(
         &self,
         mut layouter: impl Layouter<Fp>,
-        seed: u64,
+        seed: Value<Fp>,
     ) -> Result<ACell, Error> {
         layouter.assign_region(|| "linear operation", |mut region| {
             let offset = 0;
 
             self.selector.enable(&mut region, offset)?;
 
-            let seed_val = Value::known(Fp::from(seed % MODULUS));
+            let seed_val = seed.map(rem);
             let next_val = Self::next_value(seed_val);
             let rem_val = next_val.map(rem);
             let quot_val = next_val.map(quot);      
@@ -119,14 +119,13 @@ impl GachaConfig {
 }
 
 #[derive(Debug, Default)]
-struct GachaCircuit {
-    seed: u64,
-    number_of_iter: u64,
+struct GachaCircuit<const NUMBER_OF_ITER: u64> {
+    seed: Value<Fp>,
 }
 
 
-impl Circuit<Fp> for GachaCircuit {
-    type Config = GachaConfig;
+impl<const NUMBER_OF_ITER: u64> Circuit<Fp> for GachaCircuit<NUMBER_OF_ITER> {
+    type Config = GachaConfig<NUMBER_OF_ITER>;
     type FloorPlanner = SimpleFloorPlanner;
 
     fn without_witnesses(&self) -> Self {
@@ -140,7 +139,7 @@ impl Circuit<Fp> for GachaCircuit {
     fn synthesize(&self, config: Self::Config, mut layouter: impl Layouter<Fp>) -> Result<(), Error> {
         let mut prev = config.assign_first_row(layouter.namespace(|| "first row"), self.seed)?;
 
-        for _i in 1..self.number_of_iter {
+        for _i in 1..NUMBER_OF_ITER {
             prev = config.assign_next_row(layouter.namespace(|| "next row"), &prev)?;
         }
 
@@ -194,19 +193,17 @@ mod tests {
     #[test]
     fn test_rand() {
         let seed: u64 = 54352;
-
-        for i in 1..30 {
-            let circuit = GachaCircuit {
-                seed: seed,
-                number_of_iter: i,
-            };
-    
-            let rand = get_random(seed, i);
-            println!("{}", rand);
-            let public_input = vec![Fp::from(rand)];
-            let prover = MockProver::run(10, &circuit, vec![public_input]).unwrap();
-            prover.assert_satisfied();
-        }
+        const NUMBER_OF_ITER: u64 = 100;
+        
+        let circuit = GachaCircuit::<NUMBER_OF_ITER> {
+            seed: Value::known(Fp::from(seed)),
+        };
+        
+        let rand = get_random(seed, NUMBER_OF_ITER);
+        println!("{}", rand);
+        let public_input = vec![Fp::from(rand)];
+        let prover = MockProver::run(10, &circuit, vec![public_input]).unwrap();
+        prover.assert_satisfied();
     }
 
     #[cfg(feature = "dev-graph")]
@@ -214,12 +211,11 @@ mod tests {
     fn print_test_rand() {
         use plotters::prelude::*;
 
-        let seed: u64 = 12413;
-        let number_of_iter: u64 = 30;
-
-        let circuit = GachaCircuit {
-            seed: seed,
-            number_of_iter: number_of_iter,
+        let seed: u64 = 54352;
+        const NUMBER_OF_ITER: u64 = 100;
+        
+        let circuit = GachaCircuit::<NUMBER_OF_ITER> {
+            seed: Value::known(Fp::from(seed)),
         };
     
         let root = BitMapBackend::new("rand.png", (1024, 3096)).into_drawing_area();
@@ -227,7 +223,7 @@ mod tests {
         let root = root.titled("Rand Layout", ("sans-serif", 60)).unwrap();
 
         halo2_proofs::dev::CircuitLayout::default()
-            .render(5, &circuit, &root)
+            .render(10, &circuit, &root)
             .unwrap();
     }
 }
@@ -237,17 +233,23 @@ mod tests {
 fn main() {
     use dev::MockProver;
     let seed: u64 = 543657876595952;
- 
-    for i in 1..30 {
-        let circuit = GachaCircuit {
-            seed: seed,
-            number_of_iter: i,
-        };
     
-        let rand = get_random(seed, i);
-        println!("{}", rand);
-        let public_input = vec![Fp::from(rand)];
-        let prover = MockProver::run(10, &circuit, vec![public_input]).unwrap();
-        prover.assert_satisfied();
+    println!("random number check:");
+    for i in 1..30 {
+        print!("{} ", get_random(seed, i));
     }
+
+    const NUMBER_OF_ITER: u64 = 100;
+    
+    println!("\ncircuit check:");
+    let rand = get_random(seed, 100);
+    println!("{}", rand);
+
+    let circuit = GachaCircuit::<NUMBER_OF_ITER> {
+        seed: Value::known(Fp::from(seed)),
+    };
+    let public_input = vec![Fp::from(rand)];
+    let prover = MockProver::run(10, &circuit, vec![public_input]).unwrap();
+    prover.assert_satisfied();
+    println!("sucsess");
 }
