@@ -2,8 +2,7 @@ This is a halo2 circuit that verifies the Linear Congruential Generator(https://
 Developed in Ethcon 2023 Seoul for a zkDraw project(https://github.com/jae-cuz/zk-draw)
 
 
-
-#test
+# test
 
 To test,
 ```
